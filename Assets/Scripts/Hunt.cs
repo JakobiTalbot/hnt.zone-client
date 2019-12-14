@@ -5,12 +5,15 @@ using UnityEngine.UI;
 
 public class Hunt : MonoBehaviour
 {
+    [Header("REFERENCES")]
     [SerializeField]
     private GameObject m_animalIcon;
     [SerializeField]
     private RectTransform m_background;
     [SerializeField]
     private GameObject m_huntReadyMarker;
+    [SerializeField]
+    private UIBullet[] m_bullets;
 
     [Header("AUDIO")]
     [SerializeField]
@@ -33,7 +36,7 @@ public class Hunt : MonoBehaviour
     private AudioSource m_audioSource;
     private Camera m_camera;
     private PlayerController m_player;
-    private int m_nChances = 3;
+    private int m_nAmmo = 3;
 
     private int m_iAnimal;
 
@@ -50,6 +53,9 @@ public class Hunt : MonoBehaviour
         m_iAnimal = Random.Range(0, m_animals.Length);
         m_animals[m_iAnimal].Randomise();
         m_animalIcon.GetComponent<Button>().image.sprite = m_animals[m_iAnimal].m_huntIcon;
+
+        // set ammo
+        m_nAmmo = 3;
 
         // invoke hunt indicator after random time
         Invoke("EnableHunt", Random.Range(m_randomTimeRangeToStartHunt.x, m_randomTimeRangeToStartHunt.y));
@@ -95,15 +101,24 @@ public class Hunt : MonoBehaviour
 
     private IEnumerator CountClicks()
     {
-        while (m_nChances > 0)
+        while (m_nAmmo > 0)
         {
             yield return null;
 
             if (Input.GetMouseButtonDown(0))
             {
                 m_audioSource.PlayOneShot(m_gunshotAudio);
+                StartCoroutine(m_bullets[--m_nAmmo].Fire());
             }
         }
+
+        yield return new WaitForSeconds(2f);
+        // ran out of ammo
+        m_background.gameObject.SetActive(false);
+        m_animalIcon.SetActive(false);
+        m_player.StopHunting();
+        StopAllCoroutines();
+        enabled = false;
     }
 
     private IEnumerator DisplayAnimalAfterTime(float secondsUntilDisplayed, float secondsUntilDisappearing)
