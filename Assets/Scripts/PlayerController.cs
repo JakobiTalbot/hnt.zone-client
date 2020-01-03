@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Mirror;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : NetworkBehaviour
 {
     [HideInInspector]
     public bool m_bCanMove = true;
@@ -17,11 +18,15 @@ public class PlayerController : MonoBehaviour
     private GameObject m_gunPivot;
     [SerializeField]
     private LineRenderer m_laser;
+    [SerializeField]
+    private ParticleSystem m_smokesplosion;
 
     private Camera m_camera;
     private Renderer m_renderer;
     private Transform m_transform;
     private Coroutine m_currentMovementCoroutine;
+
+    private float m_startHeight = 10f;
 
     private Vector3 m_rayHitPos;
 
@@ -32,48 +37,51 @@ public class PlayerController : MonoBehaviour
         m_transform = transform;
         m_renderer = GetComponent<Renderer>();
         m_camera = Camera.main;
+        m_smokesplosion.Play(false);
     }
 
     void Update()
     {
-
-        if (m_bCanMove && Input.GetMouseButton(0))
+        // only take input from local player
+        if (isLocalPlayer)
         {
-            RaycastHit hit;
-            // if clicked on ground
-            if (Physics.Raycast(m_camera.ScreenPointToRay(Input.mousePosition), out hit))
+            if (m_bCanMove && Input.GetMouseButton(0))
             {
-                if (hit.collider.GetComponent<Ground>())
+                RaycastHit hit;
+                // if clicked on ground
+                if (Physics.Raycast(m_camera.ScreenPointToRay(Input.mousePosition), out hit))
                 {
-                    if (m_currentMovementCoroutine != null)
-                        StopCoroutine(m_currentMovementCoroutine);
-                    m_currentMovementCoroutine = StartCoroutine(LerpToPos(hit.point));
+                    if (hit.collider.GetComponent<Ground>())
+                    {
+                        if (m_currentMovementCoroutine != null)
+                            StopCoroutine(m_currentMovementCoroutine);
+                        m_currentMovementCoroutine = StartCoroutine(LerpToPos(hit.point));
+                    }
                 }
             }
-        }
 
-        if (!m_bHunting && Input.GetMouseButtonDown(0))
-        {
-            RaycastHit hit;
-            // if clicked on ground
-            if (Physics.Raycast(m_camera.ScreenPointToRay(Input.mousePosition), out hit))
+            if (!m_bHunting && Input.GetMouseButtonDown(0))
             {
-                if (hit.collider.GetComponent<Bush>())
+                RaycastHit hit;
+                // if clicked on ground
+                if (Physics.Raycast(m_camera.ScreenPointToRay(Input.mousePosition), out hit))
                 {
+                    if (hit.collider.GetComponent<Bush>())
+                    {
 
-                    m_gunPivot.SetActive(true);
+                        m_gunPivot.SetActive(true);
 
-                    m_rayHitPos = hit.point;
+                        m_rayHitPos = hit.point;
 
-                    m_bHunting = true;
-                    m_hunt.enabled = true;
+                        m_bHunting = true;
+                        m_hunt.enabled = true;
+                    }
                 }
             }
         }
 
         if (m_gunPivot.activeSelf)
         {
-
             // rotate towards bush
             Vector3 targetRot = m_rayHitPos;
             targetRot.y = m_transform.position.y;
@@ -84,8 +92,6 @@ public class PlayerController : MonoBehaviour
             points[1] = m_rayHitPos;
             m_laser.SetPositions(points);
         }
-
-
         m_renderer.material.SetVector("_HeadPosition", m_head.transform.position - m_transform.position);
     }
 
@@ -105,5 +111,10 @@ public class PlayerController : MonoBehaviour
         m_bCanMove = true;
         m_bHunting = false;
         m_gunPivot.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        Destroy(m_head.gameObject);
     }
 }

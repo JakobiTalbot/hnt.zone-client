@@ -17,6 +17,7 @@ public class HeadMovement : MonoBehaviour
     void Awake()
     {
         m_transform = transform;
+        m_transform.parent = null;
 
         m_headOffset = m_transform.position - m_bodyTransform.position;
     }
